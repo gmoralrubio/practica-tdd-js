@@ -31,3 +31,10 @@ it('una contraseña que viola dos reglas tiene EXACTAMENTE 2 errores', () => {
     expect(errors).toHaveLength(2);
     expect(errors.length).toEqual(2);
 })
+
+it('devuelve 2/3 en la fuerza del password', () => {
+    const strength = passwordStrength('Abcdefgh');
+    expect(strength).toBe(2/3);
+    expect(strength).toBeCloseTo(0.667, 3);
+    expect(strength).toBeCloseTo(0.6667, 4);
+});
