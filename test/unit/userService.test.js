@@ -54,4 +54,20 @@ it('registra a un usuario con email y password válidos', async () => {
     expect(result).toHaveProperty('username');
 });
 
-it.todo('El usuario devuelto NO incluye el campo password');
+it('El usuario devuelto NO incluye el campo password', async () => {
+    const result = await register({
+        email: VALID_EMAIL,
+        password: VALID_PASSWORD
+    });
+    expect(result).not.toHaveProperty('password');
+});
+
+it('lanza un error DUPLICATE si el usuario ya esta registrado', async () => {
+    // Mock que se ejecuta una sola vez
+    userRepositoy.findOne.mockResolvedValueOnce({ id: 'x', email: 'admin@example.com' });
+
+    await expect(
+        register({ email: 'admin@example.com', password: VALID_PASSWORD })
+    ).rejects.toMatchObject({ code: 'DUPLICATE', status: 409 });
+})
+
