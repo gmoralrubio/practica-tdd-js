@@ -16,3 +16,5 @@ it('.resolves: insert() resuelve al objeto con id', async () => {
         fakeDb.insert({ username: 'vitest-user' })
     ).resolves.toHaveProperty('id');
 })
+
+it.todo('userRepository.findOne() devuelve null si no encuentra coincidencia');
