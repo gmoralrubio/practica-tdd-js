@@ -17,4 +17,17 @@ it('devuelve los tres errores para una contraseña débil', () => {
             'Debe contener al menos un número'
         ]
     });
+});
+
+it('el array de errors contiene el mensaje de longitud', () => {
+    const { errors } = validatePassword('Abc1');
+    // Verificamos el contenido de un array parcialmente
+    expect(errors).toContain('Debe tener al menos 8 caracteres');
+});
+
+it('una contraseña que viola dos reglas tiene EXACTAMENTE 2 errores', () => {
+    const { errors } = validatePassword('SINNUM');
+    // Verificamos la longitud del array
+    expect(errors).toHaveLength(2);
+    expect(errors.length).toEqual(2);
 })
