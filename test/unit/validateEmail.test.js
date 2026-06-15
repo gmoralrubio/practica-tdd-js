@@ -37,4 +37,16 @@ describe('validateEmail - emails inválidos', () => {
          expect(errorMessage).toMatch(/string/i);
     });
 
+    it('lanza excepcion si el argumento es un number', () => {
+        expect(() => validateEmail(1234)).toThrow();
+    });
+
+    it('lanza excepcion TypeError si el argumento es un number', () => {
+        expect(() => validateEmail(1234)).toThrow(TypeError);
+    });
+
+    it('lanza un error con mensaje que menciona "string"', () => {
+        expect(() => validateEmail(1234)).toThrow('string');
+    });
+
 });
