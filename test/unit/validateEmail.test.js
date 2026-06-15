@@ -14,5 +14,16 @@ describe('validateEmail - emails válidos', () => {
         expect(result).toBe(true);
     });
 
-    it.todo('devuelve false para un string vacío');
-})
+});
+
+describe('validateEmail - emails inválidos', () => {
+
+    it('devuelve false cuando falta el @', () => {
+        expect(validateEmail('emailsinArroba.com')).toBe(false);
+    });
+
+    it('devuelve false para un string vacío', () => {
+        expect(validateEmail('')).toBe(false);
+    });
+
+});
