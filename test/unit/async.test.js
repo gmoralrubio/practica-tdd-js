@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as fakeDb from '../../src/infra/fakeDb.js';
+import * as userRepository from '../../src/infra/userRepository.js';
 
 // Async Await
 // .resolves
@@ -17,4 +18,9 @@ it('.resolves: insert() resuelve al objeto con id', async () => {
     ).resolves.toHaveProperty('id');
 })
 
-it.todo('userRepository.findOne() devuelve null si no encuentra coincidencia');
+it('userRepository.findOne() devuelve null si no encuentra coincidencia', async () => {
+    const email = 'inexistente@test.com';
+    const user = await userRepository.findOne({ email: email });
+
+    expect(user).toBeNull();
+});
