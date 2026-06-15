@@ -26,4 +26,15 @@ describe('validateEmail - emails inválidos', () => {
         expect(validateEmail('')).toBe(false);
     });
 
+    it('el TypeError lanzado tiene un mensaje que contiene "string"', () => {
+        let errorMessage = '';
+         try {
+            validateEmail(1234);
+         } catch (e) {
+            errorMessage = e.message;
+         };
+
+         expect(errorMessage).toMatch(/string/i);
+    });
+
 });
