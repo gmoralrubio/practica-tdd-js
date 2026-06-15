@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { validateEmail } from '../../src/domain/validateEmail';
 
 describe('validateEmail - emails válidos', () => {
@@ -17,6 +17,10 @@ describe('validateEmail - emails válidos', () => {
 });
 
 describe('validateEmail - emails inválidos', () => {
+
+    beforeAll(() => {
+        console.log('Validate email testing group');
+    })
 
     it('devuelve false cuando falta el @', () => {
         expect(validateEmail('emailsinArroba.com')).toBe(false);
