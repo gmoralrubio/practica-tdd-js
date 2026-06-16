@@ -3,7 +3,7 @@ import { validatePassword }               from '../domain/validatePassword.js';
 import { normalizeEmail, generateUsername } from '../utils/index.js';
 import * as userRepository                from '../infra/userRepository.js';
 import { hashPassword, comparePassword }  from '../infra/hashPassword.js';
-import { isLocked } from '../domain/lockoutPolicy.js';
+import { isLocked, registerFaliure, resetLockout } from '../domain/lockoutPolicy.js';
 
 /**
  * Crea un Error enriquecido con código de negocio y status HTTP.
@@ -28,9 +28,6 @@ function createError(code, message, details = []) {
 
   return error;
 }
-
-const LOCK_THRESHOLD = 3;
-const LOCK_DURATION_MS = 15 * 60 * 1000;
 
 /**
  * Registra un nuevo usuario.
@@ -110,12 +107,7 @@ export async function login({ email, password }) {
   if (!passwordMatches) {
 
     // CA1: Registro de intentos fallidos
-    const newCount = (user.failedAttempts ?? 0) + 1;
-    const changes = { failedAttempts: newCount }
-
-    if (newCount >= LOCK_THRESHOLD) {
-      changes.lockedUntil = now + LOCK_DURATION_MS;
-    }
+    const changes = registerFaliure({ failedAttempts: user.failedAttempts, now });
 
     await userRepository.updateOne(
       { id: user.id },
@@ -128,7 +120,7 @@ export async function login({ email, password }) {
   if (user.failedAttempts > 0 || user.lockedUntil) {
     await userRepository.updateOne(
       { id: user.id },
-      { failedAttempts: 0, lockedUntil: null }
+      resetLockout()
     );
   }
 
