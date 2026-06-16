@@ -77,7 +77,7 @@ describe('CA1 - bloqueo tras 3 intentos fallidos consecutivos', () => {
             await login({ email: VALID_EMAIL, password: 'error-pw' });
         } catch (e) { }
 
-        expect(userRepository.updateOne).toHaveResolvedWith(
+        expect(userRepository.updateOne).toHaveBeenCalledWith(
             { id: 'user-id-2' },
             { failedAttempts: 1 }
         );

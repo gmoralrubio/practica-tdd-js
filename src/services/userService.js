@@ -28,6 +28,9 @@ function createError(code, message, details = []) {
   return error;
 }
 
+const LOCK_THRESHOLD = 3;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+
 /**
  * Registra un nuevo usuario.
  *
@@ -104,6 +107,19 @@ export async function login({ email, password }) {
 
   const passwordMatches = await comparePassword(password, user.password);
   if (!passwordMatches) {
+
+    // CA1: Registro de intentos fallidos
+    const newCount = (user.failedAttempts ?? 0) + 1;
+    const changes = { failedAttempts: newCount }
+
+    if (newCount >= LOCK_THRESHOLD) {
+      changes.lockedUntil = now + LOCK_DURATION_MS;
+    }
+
+    await userRepository.updateOne(
+      { id: user.id },
+      changes
+    );
     throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas');
   }
 
