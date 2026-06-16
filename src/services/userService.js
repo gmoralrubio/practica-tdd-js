@@ -123,6 +123,14 @@ export async function login({ email, password }) {
     throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas');
   }
 
+  // CA2: Login exitoso
+  if (user.failedAttempts > 0 || user.lockedUntil) {
+    await userRepository.updateOne(
+      { id: user.id },
+      { failedAttempts: 0, lockedUntil: null }
+    );
+  }
+
   const { password: _omitted, ...safeUser } = user;
 
   return safeUser;
