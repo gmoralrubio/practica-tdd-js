@@ -29,7 +29,7 @@ afterEach(() => {
 
 describe('CA1 - bloqueo tras 3 intentos fallidos consecutivos', () => {
 
-    it('Tras el 3r intento, llama a updateOne con lockedUnitl = now + 15 min', async () => {
+    it('Tras el 3r intento, llama a updateOne con lockedUntil = now + 15 min', async () => {
         const NOW = new Date('2021-06-01T10:00:00.000Z').getTime();
         vi.setSystemTime(NOW);
 
@@ -37,7 +37,7 @@ describe('CA1 - bloqueo tras 3 intentos fallidos consecutivos', () => {
             id: 'user-id-2',
             email: VALID_EMAIL,
             password: HASHED_PASSWORD,
-            lockedUnitl: null,
+            lockedUntil: null,
             failedAttempts: 2
         };
         userRepository.findOne.mockResolvedValueOnce(userWith2Fail);
@@ -52,7 +52,7 @@ describe('CA1 - bloqueo tras 3 intentos fallidos consecutivos', () => {
             { id: 'user-id-2' },
             {
                 failedAttempts: 3,
-                lockedUnitl: NOW + LOCK_DURATION_MS,
+                lockedUntil: NOW + LOCK_DURATION_MS,
             }
         );
     });
@@ -65,7 +65,7 @@ describe('CA1 - bloqueo tras 3 intentos fallidos consecutivos', () => {
             id: 'user-id-2',
             email: VALID_EMAIL,
             password: HASHED_PASSWORD,
-            lockedUnitl: null,
+            lockedUntil: null,
             failedAttempts: 0
         };
 
@@ -84,7 +84,7 @@ describe('CA1 - bloqueo tras 3 intentos fallidos consecutivos', () => {
 
         // El 1r intento NO bloquea
         const callArgs = userRepository.updateOne.mock.calls[0][1];
-        expect(callArgs.lockedUnitl).toBeUndefined();
+        expect(callArgs.lockedUntil).toBeUndefined();
 
     });
 });
@@ -96,7 +96,7 @@ describe('CA2 - Login exitoso reseta los contadores de bloqueo', () => {
             id: 'user-id-3',
             email: VALID_EMAIL,
             password: HASHED_PASSWORD,
-            lockedUnitl: null,
+            lockedUntil: null,
             failedAttempts: 2
         };
 
@@ -108,7 +108,7 @@ describe('CA2 - Login exitoso reseta los contadores de bloqueo', () => {
 
         expect(userRepository.updateOne).toHaveBeenCalledWith(
            { id: 'user-id-3' },
-           { failedAttempts: 0, lockedUnitl: null } 
+           { failedAttempts: 0, lockedUntil: null } 
         );
 
     });
@@ -171,7 +171,7 @@ describe('CA4 - el bloqueo expira automaticamente tras 15 minuts', () => {
             id: 'user-id-6',
             email: VALID_EMAIL,
             password: HASHED_PASSWORD,
-            lockedUnitl: NOW - 1000, // Expiró hace 1sec
+            lockedUntil: NOW - 1000, // Expiró hace 1sec
             failedAttempts: 3
         };
 
@@ -183,7 +183,7 @@ describe('CA4 - el bloqueo expira automaticamente tras 15 minuts', () => {
 
         expect(userRepository.updateOne).toHaveBeenCalledWith(
             { id: 'user-id-6' },
-            { lockedUnitl: null, failedAttempts: 0 }
+            { lockedUntil: null, failedAttempts: 0 }
         )
 
     })
