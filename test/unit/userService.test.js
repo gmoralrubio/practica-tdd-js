@@ -115,5 +115,12 @@ it('userRepository.create recibe el password HASHEADO, no en plano', async () =>
     expect(createCallArgs.password).not.toBe(VALID_PASSWORD);
 });
 
-it.todo('no llamamos a comparePassword si el usuario no existe');
+it('no llamamos a comparePassword si el usuario no existe', async () => {
+    try {
+        await login({ email: 'noexiste@error.com', password: 'noexiste' });
+    } catch (e) { }
+
+    // Nos interesa el Spy, no la excepción
+    expect(hashPasswordModule.comparePassword).not.toHaveBeenCalled();
+});
 
