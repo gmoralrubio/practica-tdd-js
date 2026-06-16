@@ -56,4 +56,133 @@ describe('CA1 - bloqueo tras 3 intentos fallidos consecutivos', () => {
             }
         );
     });
+
+    it('tras el 1r intento fallido, incrementa failedAttempts pero NO establece lockedUntil', async () => {
+        const NOW = new Date('2021-06-01T10:00:00.000Z').getTime();
+        vi.setSystemTime(NOW);
+
+        const freshUser = {
+            id: 'user-id-2',
+            email: VALID_EMAIL,
+            password: HASHED_PASSWORD,
+            lockedUnitl: null,
+            failedAttempts: 0
+        };
+
+        userRepository.findOne.mockResolvedValueOnce(freshUser);
+        hashPasswordModule.comparePassword.mockResolvedValueOnce(false);
+        userRepository.updateOne.mockResolvedValueOnce({ ...freshUser });
+
+        try {
+            await login({ email: VALID_EMAIL, password: 'error-pw' });
+        } catch (e) { }
+
+        expect(userRepository.updateOne).toHaveResolvedWith(
+            { id: 'user-id-2' },
+            { failedAttempts: 1 }
+        );
+
+        // El 1r intento NO bloquea
+        const callArgs = userRepository.updateOne.mock.calls[0][1];
+        expect(callArgs.lockedUnitl).toBeUndefined();
+
+    });
+});
+
+describe('CA2 - Login exitoso reseta los contadores de bloqueo', () => {
+
+    it('si el usuario tenia failedAttempts > 0, llama a updateOne con failedAttempts: 0 y lockedUntil: null', async () => {
+        const userWithFails = {
+            id: 'user-id-3',
+            email: VALID_EMAIL,
+            password: HASHED_PASSWORD,
+            lockedUnitl: null,
+            failedAttempts: 2
+        };
+
+        userRepository.findOne.mockResolvedValueOnce(userWithFails);
+        hashPasswordModule.comparePassword.mockResolvedValueOnce(true);
+        userRepository.updateOne.mockResolvedValueOnce({ ...userWithFails });
+
+        await login({ email: VALID_EMAIL, password: VALID_PASSWORD });
+
+        expect(userRepository.updateOne).toHaveBeenCalledWith(
+           { id: 'user-id-3' },
+           { failedAttempts: 0, lockedUnitl: null } 
+        );
+
+    });
+
+});
+
+describe('CA3 - cuenta bloqueada rechaza login (error LOCKED 423)', () => {
+
+    // Verificar que esto explota
+    it('si lockedUntil es futuro, lanza error LOCKED status 423', async () => {
+        const NOW = new Date('2021-06-01T10:00:00.000Z').getTime();
+        vi.setSystemTime(NOW);
+
+        const userLocked = {
+            id: 'user-id-4',
+            email: VALID_EMAIL,
+            password: HASHED_PASSWORD,
+            lockedUnitl: NOW + LOCK_DURATION_MS,
+            failedAttempts: 3
+        };
+
+        expect(
+            login({ email: VALID_EMAIL, password: VALID_PASSWORD })
+        ).rejects.toMatchObject({ code: 'LOCKED', status: 423 });
+    });
+
+    it('el error LOCKED se lanza ANTES de comparar el password (sin llamar a comparePassword)', async () => {
+        const NOW = new Date('2021-06-01T10:00:00.000Z').getTime();
+        vi.setSystemTime(NOW);
+
+        const userLocked = {
+            id: 'user-id-5',
+            email: VALID_EMAIL,
+            password: HASHED_PASSWORD,
+            lockedUnitl: NOW + LOCK_DURATION_MS,
+            failedAttempts: 3
+        };
+
+        userRepository.findOne.mockResolvedValueOnce(userLocked);
+
+        try {
+            await login({ email: VALID_EMAIL, password: VALID_PASSWORD });
+        } catch (e) { }
+
+        expect(hashPasswordModule.comparePassword).not.toHaveBeenCalled();
+
+    });
+
+});
+
+describe('CA4 - el bloqueo expira automaticamente tras 15 minuts', () => {
+
+    it('tras login exitoso con cuenta expirada, llama a updateOne para limpiar contadores', async () => {
+        const NOW = new Date('2021-06-01T10:00:00.000Z').getTime();
+        vi.setSystemTime(NOW);
+
+        const expiredUserLocked = {
+            id: 'user-id-6',
+            email: VALID_EMAIL,
+            password: HASHED_PASSWORD,
+            lockedUnitl: NOW - 1000, // Expiró hace 1sec
+            failedAttempts: 3
+        };
+
+        userRepository.findOne.mockResolvedValueOnce(expiredUserLocked);
+        hashPasswordModule.comparePassword.mockResolvedValueOnce(true);
+        userRepository.updateOne.mockResolvedValueOnce({ ...expiredUserLocked });
+
+        await login({ email: VALID_EMAIL, password: VALID_PASSWORD });
+
+        expect(userRepository.updateOne).toHaveBeenCalledWith(
+            { id: 'user-id-6' },
+            { lockedUnitl: null, failedAttempts: 0 }
+        )
+
+    })
 })
