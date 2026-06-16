@@ -126,9 +126,11 @@ describe('CA3 - cuenta bloqueada rechaza login (error LOCKED 423)', () => {
             id: 'user-id-4',
             email: VALID_EMAIL,
             password: HASHED_PASSWORD,
-            lockedUnitl: NOW + LOCK_DURATION_MS,
+            lockedUntil: NOW + LOCK_DURATION_MS,
             failedAttempts: 3
         };
+
+        userRepository.findOne.mockResolvedValueOnce(userLocked);
 
         expect(
             login({ email: VALID_EMAIL, password: VALID_PASSWORD })
@@ -143,7 +145,7 @@ describe('CA3 - cuenta bloqueada rechaza login (error LOCKED 423)', () => {
             id: 'user-id-5',
             email: VALID_EMAIL,
             password: HASHED_PASSWORD,
-            lockedUnitl: NOW + LOCK_DURATION_MS,
+            lockedUntil: NOW + LOCK_DURATION_MS,
             failedAttempts: 3
         };
 

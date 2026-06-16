@@ -17,6 +17,7 @@ function createError(code, message, details = []) {
     VALIDATION:          422,
     DUPLICATE:           409,
     INVALID_CREDENTIALS: 401,
+    LOCKED:              423, // Resolvemos CA3
   };
 
   const error = new Error(message);
@@ -93,6 +94,12 @@ export async function login({ email, password }) {
 
   if (!user) {
     throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas');
+  }
+
+  const now = Date.now();
+  // CA3: cuenta bloqueada (lockedUntil es futuro) -> Error 423
+  if (user.lockedUntil && now < user.lockedUntil) {
+    throw createError('LOCKED', 'Cuenta bloqueada temporalmente');
   }
 
   const passwordMatches = await comparePassword(password, user.password);
