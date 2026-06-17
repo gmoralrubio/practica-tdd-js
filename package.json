@@ -11,7 +11,8 @@
     "test:unit:watch": "vitest test/unit",
     "test:integration": "vitest run test/integration",
     "test:integration:watch": "vitest test/integration",
-    "test:coverage": "vitest --coverage.enabled"
+    "test:coverage": "vitest --coverage.enabled",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -22,6 +23,7 @@
     "node": ">=24.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@vitest/coverage-v8": "^4.1.9",
     "supertest": "^7.2.2",
     "vitest": "^4.1.9"
