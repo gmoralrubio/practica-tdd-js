@@ -63,4 +63,29 @@ describe('POST /register - gestión de errores', () => {
 
     });
 
+    it('deuelve un 422 con DOS errores si el password no tiene mayúscula ni número', async () => {
+        const res = await request(app)
+            .post('/register')
+            .send({ email: VALID_EMAIL, password: 'sinmayusculas' });
+    
+        expect(res.status).toBe(422);
+        expect(res.body.details.length).toBeGreaterThanOrEqual(2);
+    
+    })
+
+    it('devuelve un 409 si se intenta registrar el mismo email dos veces', async () => {
+        const res1 = await request(app)
+            .post('/register')
+            .send({ email: VALID_EMAIL, password: VALID_PASSWORD });
+
+        expect(res1.status).toBe(201);
+
+        const res2 = await request(app)
+            .post('/register')
+            .send({ email: VALID_EMAIL, password: VALID_PASSWORD });
+        
+        expect(res2.status).toBe(409);
+        expect(res2.body).toHaveProperty('error');
+    });
+
 });
