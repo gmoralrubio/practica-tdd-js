@@ -7,3 +7,14 @@ CA3 (ok) — Estando bloqueada, la cuenta RECHAZA el login aunque la password se
       correcta. Error LOCKED (HTTP 423). Y NO llega ni a comparar la password.
 
 CA4 (ok) — Pasados los 15 minutos, el bloqueo EXPIRA solo y vuelve a aceptar logins.
+
+```js
+test('descripcion del flujo', async () => {
+      await page.goto('/ruta'); // - navegamos a una ruta
+      await page.click('#button');
+
+      // TEST
+      await expect(page.locator('#xyz'))
+            .toContainText('texto esperado')
+});
+```
