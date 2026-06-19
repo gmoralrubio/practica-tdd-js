@@ -19,18 +19,17 @@ const USER = {
 	createdAt: '2024-01-01T00:00:00.000Z',
 }
 
-beforeEach(() => {
-	vi.clearAllMocks()
-	userRepository.findOne.mockResolvedValueOnce(USER)
-	hashPasswordModule.comparePassword.mockResolvedValueOnce(true)
-	hashPasswordModule.hashPassword.mockResolvedValueOnce(HASHED_PASSWORD)
-	userRepository.updateOne.mockResolvedValueOnce({
-		...USER,
-		password: NEW_VALID_PASSWORD,
-	})
-})
-
 describe('changePassword - Happy path (200)', () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		userRepository.findOne.mockResolvedValueOnce(USER)
+		hashPasswordModule.comparePassword.mockResolvedValueOnce(true)
+		hashPasswordModule.hashPassword.mockResolvedValueOnce(HASHED_PASSWORD)
+		userRepository.updateOne.mockResolvedValueOnce({
+			...USER,
+			password: NEW_VALID_PASSWORD,
+		})
+	})
 	it('Devuelve el usuario sin password cuando todo es correcto', async () => {
 		const user = await changePassword({
 			email: VALID_EMAIL,
@@ -64,5 +63,41 @@ describe('changePassword - Happy path (200)', () => {
 		const updateCallArgs = userRepository.updateOne.mock.calls[0][1]
 
 		expect(updateCallArgs.password).toBe(HASHED_PASSWORD)
+	})
+})
+
+describe('changePassword - INVALID_CREDENTIALS (401)', () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it('Lanza 401 si el usuario no existe', async () => {
+		userRepository.findOne.mockResolvedValueOnce(null)
+
+		await expect(
+			changePassword({
+				email: VALID_EMAIL,
+				currentPassword: VALID_PASSWORD,
+				newPassword: NEW_VALID_PASSWORD,
+			})
+		).rejects.toMatchObject({
+			code: 'INVALID_CREDENTIALS',
+			status: 401,
+		})
+	})
+
+	it('Lanza 401 si la contraseña actual no coincide', async () => {
+		hashPasswordModule.comparePassword.mockResolvedValueOnce(false)
+
+		await expect(
+			changePassword({
+				email: VALID_EMAIL,
+				currentPassword: VALID_PASSWORD,
+				newPassword: NEW_VALID_PASSWORD,
+			})
+		).rejects.toMatchObject({
+			code: 'INVALID_CREDENTIALS',
+			status: 401,
+		})
 	})
 })
