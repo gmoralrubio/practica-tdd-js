@@ -1,9 +1,13 @@
-import { validateEmail }                  from '../domain/validateEmail.js';
-import { validatePassword }               from '../domain/validatePassword.js';
-import { normalizeEmail, generateUsername } from '../utils/index.js';
-import * as userRepository                from '../infra/userRepository.js';
-import { hashPassword, comparePassword }  from '../infra/hashPassword.js';
-import { isLocked, registerFaliure, resetLockout } from '../domain/lockoutPolicy.js';
+import { validateEmail } from '../domain/validateEmail.js'
+import { validatePassword } from '../domain/validatePassword.js'
+import { normalizeEmail, generateUsername } from '../utils/index.js'
+import * as userRepository from '../infra/userRepository.js'
+import { hashPassword, comparePassword } from '../infra/hashPassword.js'
+import {
+	isLocked,
+	registerFaliure,
+	resetLockout,
+} from '../domain/lockoutPolicy.js'
 
 /**
  * Crea un Error enriquecido con código de negocio y status HTTP.
@@ -14,19 +18,19 @@ import { isLocked, registerFaliure, resetLockout } from '../domain/lockoutPolicy
  * @returns {Error}
  */
 function createError(code, message, details = []) {
-  const STATUS_MAP = {
-    VALIDATION:          422,
-    DUPLICATE:           409,
-    INVALID_CREDENTIALS: 401,
-    LOCKED:              423, // Resolvemos CA3
-  };
+	const STATUS_MAP = {
+		VALIDATION: 422,
+		DUPLICATE: 409,
+		INVALID_CREDENTIALS: 401,
+		LOCKED: 423, // Resolvemos CA3
+	}
 
-  const error = new Error(message);
-  error.code    = code;
-  error.status  = STATUS_MAP[code] ?? 500;
-  error.details = details;
+	const error = new Error(message)
+	error.code = code
+	error.status = STATUS_MAP[code] ?? 500
+	error.details = details
 
-  return error;
+	return error
 }
 
 /**
@@ -38,53 +42,56 @@ function createError(code, message, details = []) {
  * @throws {Error} code='DUPLICATE'  (409) si el email ya está registrado.
  */
 export async function register({ email, password }) {
-  const validationErrors = [];
+	const validationErrors = []
 
-  let emailOk = false;
-  try {
-    emailOk = validateEmail(email);
-  } catch {
-    validationErrors.push('El email debe ser un texto válido');
-  }
+	let emailOk = false
+	try {
+		emailOk = validateEmail(email)
+	} catch {
+		validationErrors.push('El email debe ser un texto válido')
+	}
 
-  if (!emailOk && !validationErrors.length) {
-    validationErrors.push('El formato del email no es válido');
-  }
+	if (!emailOk && !validationErrors.length) {
+		validationErrors.push('El formato del email no es válido')
+	}
 
-  if (!password) {
-    validationErrors.push('El password es obligatorio');
-  } else {
+	if (!password) {
+		validationErrors.push('El password es obligatorio')
+	} else {
+		const { valid: passwordOk, errors: passwordErrors } =
+			validatePassword(password)
+		if (!passwordOk) {
+			validationErrors.push(...passwordErrors)
+		}
+	}
 
-    const { valid: passwordOk, errors: passwordErrors } = validatePassword(password);
-    if (!passwordOk) {
-      validationErrors.push(...passwordErrors);
-    }
+	if (validationErrors.length > 0) {
+		throw createError(
+			'VALIDATION',
+			'Los datos de registro no son válidos',
+			validationErrors
+		)
+	}
 
-  }
+	const normalizedEmail = normalizeEmail(email)
 
-  if (validationErrors.length > 0) {
-    throw createError('VALIDATION', 'Los datos de registro no son válidos', validationErrors);
-  }
+	const existing = await userRepository.findOne({ email: normalizedEmail })
+	if (existing) {
+		throw createError('DUPLICATE', 'El email ya está registrado')
+	}
 
-  const normalizedEmail = normalizeEmail(email);
+	const hashedPassword = await hashPassword(password)
+	const username = generateUsername(normalizedEmail)
 
-  const existing = await userRepository.findOne({ email: normalizedEmail });
-  if (existing) {
-    throw createError('DUPLICATE', 'El email ya está registrado');
-  }
+	const created = await userRepository.create({
+		username,
+		email: normalizedEmail,
+		password: hashedPassword,
+	})
 
-  const hashedPassword = await hashPassword(password);
-  const username       = generateUsername(normalizedEmail);
+	const { password: _omitted, ...safeUser } = created
 
-  const created = await userRepository.create({
-    username,
-    email:    normalizedEmail,
-    password: hashedPassword,
-  });
-
-  const { password: _omitted, ...safeUser } = created;
-
-  return safeUser;
+	return safeUser
 }
 
 /**
@@ -95,42 +102,92 @@ export async function register({ email, password }) {
  * @throws {Error} code='INVALID_CREDENTIALS' (401) si las credenciales no son válidas.
  */
 export async function login({ email, password }) {
-  const normalizedEmail = normalizeEmail(email);
+	const normalizedEmail = normalizeEmail(email)
 
-  const user = await userRepository.findOne({ email: normalizedEmail });
+	const user = await userRepository.findOne({ email: normalizedEmail })
 
-  if (!user) {
-    throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas');
-  }
+	if (!user) {
+		throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas')
+	}
 
-  const now = Date.now();
-  // CA3: cuenta bloqueada (lockedUntil es futuro) -> Error 423
-  if (isLocked({ lockedUntil: user.lockedUntil, now })) {
-    throw createError('LOCKED', 'Cuenta bloqueada temporalmente');
-  }
+	const now = Date.now()
+	// CA3: cuenta bloqueada (lockedUntil es futuro) -> Error 423
+	if (isLocked({ lockedUntil: user.lockedUntil, now })) {
+		throw createError('LOCKED', 'Cuenta bloqueada temporalmente')
+	}
 
-  const passwordMatches = await comparePassword(password, user.password);
-  if (!passwordMatches) {
+	const passwordMatches = await comparePassword(password, user.password)
+	if (!passwordMatches) {
+		// CA1: Registro de intentos fallidos
+		const changes = registerFaliure({
+			failedAttempts: user.failedAttempts,
+			now,
+		})
 
-    // CA1: Registro de intentos fallidos
-    const changes = registerFaliure({ failedAttempts: user.failedAttempts, now });
+		await userRepository.updateOne({ id: user.id }, changes)
+		throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas')
+	}
 
-    await userRepository.updateOne(
-      { id: user.id },
-      changes
-    );
-    throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas');
-  }
+	// CA2: Login exitoso
+	if (user.failedAttempts > 0 || user.lockedUntil) {
+		await userRepository.updateOne({ id: user.id }, resetLockout())
+	}
 
-  // CA2: Login exitoso
-  if (user.failedAttempts > 0 || user.lockedUntil) {
-    await userRepository.updateOne(
-      { id: user.id },
-      resetLockout()
-    );
-  }
+	const { password: _omitted, ...safeUser } = user
 
-  const { password: _omitted, ...safeUser } = user;
+	return safeUser
+}
 
-  return safeUser;
+/**
+ *
+ * @param {{email: string, currentPassword: string, newPassword: string}} credentials
+ * @returns {Promise<object>} Usuario creado sin el campo password.
+ * @throws {Error} code='INVALID_CREDENTIALS' (401) si el usuario no existe.
+ * @throws {Error} code='INVALID_CREDENTIALS' (401) si la contraseña actual no coincide con la contraseña del usuario.
+ * @throws {Error} code='VALIDATION' (422) si la nueva contraseña es igual a la actual.
+ * @throws {Error} code='VALIDATION' (422) si la nueva contraseña NO ES VÁLIDA.
+ */
+
+export async function changePassword({ email, currentPassword, newPassword }) {
+	const normalizedEmail = normalizeEmail(email)
+
+	const user = await userRepository.findOne({ email: normalizedEmail })
+	if (!user) {
+		throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas')
+	}
+
+	const passwordMatches = await comparePassword(
+		currentPassword,
+		user.password
+	)
+	if (!passwordMatches) {
+		throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas')
+	}
+
+	if (currentPassword === newPassword) {
+		throw createError(
+			'VALIDATION',
+			'La nueva contraseña debe ser distinta a la actual'
+		)
+	}
+
+	const { valid: isValidPassword, errors: details } =
+		validatePassword(newPassword)
+	if (!isValidPassword) {
+		throw createError(
+			'VALIDATION',
+			'La nueva contraseña no es válida',
+			details
+		)
+	}
+
+	const hashedPassword = await hashPassword(newPassword)
+	const updatedUser = await userRepository.updateOne(
+		{ id: user.id },
+		{ password: hashedPassword }
+	)
+
+	const { password: _omitted, ...safeUser } = updatedUser
+
+	return safeUser
 }
