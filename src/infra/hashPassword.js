@@ -1,6 +1,6 @@
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcryptjs'
 
-const ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
+const ROUNDS = Number(process.env.SALT_ROUNDS) || 10
 
 /**
  * Genera un hash bcrypt de una contraseña en texto plano.
@@ -9,7 +9,7 @@ const ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
  * @returns {Promise<string>}
  */
 export async function hashPassword(plain) {
-  return bcrypt.hash(plain, ROUNDS);
+	return bcrypt.hash(plain, ROUNDS)
 }
 
 /**
@@ -20,5 +20,16 @@ export async function hashPassword(plain) {
  * @returns {Promise<boolean>}
  */
 export async function comparePassword(plain, hash) {
-  return bcrypt.compare(plain, hash);
+	return bcrypt.compare(plain, hash)
+}
+
+/**
+ * Compara dos contraseñas en texto plano.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @returns {Promise<boolean>}
+ */
+export async function comparePlainPassword(a, b) {
+	return Boolean(a === b)
 }

@@ -2,7 +2,11 @@ import { validateEmail } from '../domain/validateEmail.js'
 import { validatePassword } from '../domain/validatePassword.js'
 import { normalizeEmail, generateUsername } from '../utils/index.js'
 import * as userRepository from '../infra/userRepository.js'
-import { hashPassword, comparePassword } from '../infra/hashPassword.js'
+import {
+	hashPassword,
+	comparePassword,
+	comparePlainPassword,
+} from '../infra/hashPassword.js'
 import {
 	isLocked,
 	registerFaliure,
@@ -156,6 +160,7 @@ export async function changePassword({ email, currentPassword, newPassword }) {
 		throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas')
 	}
 
+	// CA2 - Contraseña actual incorrecta
 	const passwordMatches = await comparePassword(
 		currentPassword,
 		user.password
@@ -164,13 +169,19 @@ export async function changePassword({ email, currentPassword, newPassword }) {
 		throw createError('INVALID_CREDENTIALS', 'Credenciales incorrectas')
 	}
 
-	if (currentPassword === newPassword) {
+	// CA4 — Nueva contrasena igual a la actual
+	const passwordAreEqual = await comparePlainPassword(
+		currentPassword,
+		newPassword
+	)
+	if (passwordAreEqual) {
 		throw createError(
 			'VALIDATION',
 			'La nueva contraseña debe ser distinta a la actual'
 		)
 	}
 
+	// CA3 — Nueva contrasena no cumple la politica
 	const { valid: isValidPassword, errors: details } =
 		validatePassword(newPassword)
 	if (!isValidPassword) {
