@@ -21,7 +21,6 @@ const USER = {
 
 describe('changePassword - Happy path (200)', () => {
 	beforeEach(() => {
-		vi.clearAllMocks()
 		userRepository.findOne.mockResolvedValueOnce(USER)
 		hashPasswordModule.comparePassword.mockResolvedValueOnce(true)
 		hashPasswordModule.hashPassword.mockResolvedValueOnce(HASHED_PASSWORD)
@@ -67,10 +66,6 @@ describe('changePassword - Happy path (200)', () => {
 })
 
 describe('changePassword - INVALID_CREDENTIALS (401)', () => {
-	beforeEach(() => {
-		vi.clearAllMocks()
-	})
-
 	it('Lanza 401 si el usuario no existe', async () => {
 		userRepository.findOne.mockResolvedValueOnce(null)
 
@@ -104,10 +99,6 @@ describe('changePassword - INVALID_CREDENTIALS (401)', () => {
 })
 
 describe('changePassword - VALIDATION (422)', () => {
-	beforeEach(() => {
-		vi.clearAllMocks()
-	})
-
 	it('Lanza 422 si la nueva contraseña es igual a la actual', async () => {
 		userRepository.findOne.mockResolvedValueOnce(USER)
 		hashPasswordModule.comparePassword.mockResolvedValueOnce(true)
