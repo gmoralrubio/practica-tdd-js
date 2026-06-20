@@ -102,3 +102,65 @@ describe('changePassword - INVALID_CREDENTIALS (401)', () => {
 		})
 	})
 })
+
+describe('changePassword - VALIDATION (422)', () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it('Lanza 422 si la nueva contraseña es igual a la actual', async () => {
+		userRepository.findOne.mockResolvedValueOnce(USER)
+		hashPasswordModule.comparePassword.mockResolvedValueOnce(true)
+		hashPasswordModule.comparePlainPassword.mockResolvedValueOnce(true)
+
+		await expect(
+			changePassword({
+				email: VALID_EMAIL,
+				currentPassword: VALID_PASSWORD,
+				newPassword: VALID_PASSWORD,
+			})
+		).rejects.toMatchObject({
+			code: 'VALIDATION',
+			status: 422,
+		})
+	})
+
+	it('Lanza 422 si la nueva contrasena no cumple la politica', async () => {
+		userRepository.findOne.mockResolvedValueOnce(USER)
+		hashPasswordModule.comparePassword.mockResolvedValueOnce(true)
+		hashPasswordModule.comparePlainPassword.mockResolvedValueOnce(false)
+
+		await expect(
+			changePassword({
+				email: VALID_EMAIL,
+				currentPassword: VALID_PASSWORD,
+				newPassword: 'invalidpassword',
+			})
+		).rejects.toMatchObject({
+			code: 'VALIDATION',
+			status: 422,
+		})
+	})
+
+	it('El error 422 por política incluye details con los mensajes de reglas incumplidas', async () => {
+		userRepository.findOne.mockResolvedValueOnce(USER)
+		hashPasswordModule.comparePassword.mockResolvedValueOnce(true)
+		hashPasswordModule.comparePlainPassword.mockResolvedValueOnce(false)
+
+		await expect(
+			changePassword({
+				email: VALID_EMAIL,
+				currentPassword: VALID_PASSWORD,
+				newPassword: 'corta',
+			})
+		).rejects.toMatchObject({
+			code: 'VALIDATION',
+			status: 422,
+			details: [
+				'Debe tener al menos 8 caracteres',
+				'Debe contener al menos una letra mayúscula',
+				'Debe contener al menos un número',
+			],
+		})
+	})
+})
