@@ -87,6 +87,7 @@ describe('changePassword - INVALID_CREDENTIALS (401)', () => {
 	})
 
 	it('Lanza 401 si la contraseña actual no coincide', async () => {
+		userRepository.findOne.mockResolvedValueOnce(USER)
 		hashPasswordModule.comparePassword.mockResolvedValueOnce(false)
 
 		await expect(
