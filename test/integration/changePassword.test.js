@@ -74,3 +74,44 @@ describe('POST /change-password - Happy path', () => {
 		expect(login.body).toHaveProperty('error', 'Credenciales incorrectas')
 	})
 })
+
+describe('POST /change-password - errores', () => {
+	it('Devuelve 401 so la contraseña actual es incorrecta (CA2)', async () => {
+		const res = await changeUserPassword(
+			VALID_EMAIL,
+			'invalidPassword',
+			NEW_VALID_PASSWORD
+		)
+
+		expect(res.status).toBe(401)
+		expect(res.body).toHaveProperty('error', 'Credenciales incorrectas')
+	})
+
+	it('Devuelve 422 si la nueva contrasena no cumple la politica (CA3)', async () => {
+		const res = await changeUserPassword(
+			VALID_EMAIL,
+			VALID_PASSWORD,
+			'corta'
+		)
+
+		expect(res.status).toBe(422)
+		expect(res.body).toHaveProperty(
+			'error',
+			'La nueva contraseña no es válida'
+		)
+	})
+
+	it('Devuelve 422 si la nueva contrasena es igual a la actual (CA4)', async () => {
+		const res = await changeUserPassword(
+			VALID_EMAIL,
+			VALID_PASSWORD,
+			VALID_PASSWORD
+		)
+
+		expect(res.status).toBe(422)
+		expect(res.body).toHaveProperty(
+			'error',
+			'La nueva contraseña debe ser distinta a la actual'
+		)
+	})
+})
