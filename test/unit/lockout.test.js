@@ -132,8 +132,8 @@ describe('CA3 - cuenta bloqueada rechaza login (error LOCKED 423)', () => {
 
         userRepository.findOne.mockResolvedValueOnce(userLocked);
 
-        expect(
-            login({ email: VALID_EMAIL, password: VALID_PASSWORD })
+        await expect(
+             login({ email: VALID_EMAIL, password: VALID_PASSWORD })
         ).rejects.toMatchObject({ code: 'LOCKED', status: 423 });
     });
 
